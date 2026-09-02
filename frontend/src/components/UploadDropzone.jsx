@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { motion } from 'framer-motion'
 import api from '../api/client'
 
 export default function UploadDropzone({ onUploaded }) {
@@ -24,18 +25,27 @@ export default function UploadDropzone({ onUploaded }) {
   }
 
   return (
-    <div
+    <motion.div
+      whileHover={{ scale: 1.005 }}
+      whileTap={{ scale: 0.995 }}
       className={`dropzone ${drag ? 'drag' : ''}`}
       onDragOver={e => { e.preventDefault(); setDrag(true) }}
       onDragLeave={() => setDrag(false)}
       onDrop={e => { e.preventDefault(); setDrag(false); upload(e.dataTransfer.files[0]) }}
       onClick={() => document.getElementById('fileInp').click()}
+      animate={drag ? { scale: 1.02, borderColor: '#0f172a' } : {}}
+      transition={{ type: 'spring', stiffness: 300 }}
     >
       <input id="fileInp" type="file" accept=".pdf" hidden onChange={e => upload(e.target.files[0])} />
-      {loading ? <p>Uploading...</p> : <>
-        <p style={{ fontWeight: 600 }}>Drop PDF here or click to browse</p>
-        <p style={{ fontSize: 13, color: '#64748b', marginTop: 6 }}>Supports up to 20MB • Summarize, Chat, Notes, Quiz</p>
-      </>}
-    </div>
+      {loading ? (
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }}>Uploading...</motion.p>
+      ) : (
+        <>
+          <p style={{ fontWeight: 600 }}>Drop PDF here or click to browse</p>
+          <p style={{ fontSize: 13, color: '#64748b', marginTop: 6 }}>Supports up to 20MB • Summarize, Chat, Notes, Quiz</p>
+        </>
+      )}
+    </motion.div>
   )
 }
+
