@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: ai-doc-helper-backend
+    env: docker
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /health
+    envVars:
+      - key: ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dochelper-db
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+      - key: MAX_UPLOAD_MB
+        value: 20
+    autoDeploy: true
+
+databases:
+  - name: dochelper-db
+    plan: free
+    databaseName: dochelper
+    user: dochelper
+
+# Alternative: use Neon (free forever) instead of Render Postgres:
+# 1. Create at neon.tech → copy DATABASE_URL=postgresql://user:pass@ep-xxx.neon.tech/dochelper?sslmode=require
+# 2. Delete `databases:` section above, set envVar DATABASE_URL sync:false and paste Neon URL
+# Frontend: deploy separately on Vercel (root: frontend)
