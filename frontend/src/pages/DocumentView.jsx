@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import api from '../api/client'
 import QuizView from '../components/QuizView'
+import MarkdownRenderer from '../components/MarkdownRenderer'
 
 export default function DocumentView() {
   const { id } = useParams()
@@ -109,7 +110,11 @@ export default function DocumentView() {
                 <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} className="btn" disabled={loading} onClick={()=>doSummary('detailed')}>Detailed</motion.button>
                 {loading && <span style={{ fontSize:13, alignSelf:'center'}}>Generating...</span>}
               </div>
-              {summary ? <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card markdown" style={{ whiteSpace:'pre-wrap' }}>{summary}</motion.div> : <p style={{ color:'#64748b' }}>Click a button to summarize. Try "short" first.</p>}
+              {summary ? (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card">
+                  <MarkdownRenderer content={summary} />
+                </motion.div>
+              ) : <p style={{ color:'#64748b' }}>Click a button to summarize. Try "short" first.</p>}
             </div>
           )}
 
@@ -119,12 +124,18 @@ export default function DocumentView() {
                 <input className="input" placeholder='e.g. Explain chapter 4 in simple language' value={qa.question} onChange={e=>setQa({...qa, question:e.target.value})} onKeyDown={e=>e.key==='Enter'&&ask()} />
                 <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} className="btn" disabled={loading} onClick={ask}>Ask</motion.button>
               </div>
-              {qa.answer && <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card" style={{ marginTop:12, whiteSpace:'pre-wrap' }}>{qa.answer}</motion.div>}
+              {qa.answer && (
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card" style={{ marginTop:12 }}>
+                  <MarkdownRenderer content={qa.answer} />
+                </motion.div>
+              )}
               <div style={{ marginTop:16 }}>
                 {qa.history.map((h,i)=>(
                   <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }} className="card" style={{ marginBottom:8 }}>
                     <p style={{ fontWeight:600 }}>Q: {h.question}</p>
-                    <p style={{ marginTop:6, color:'#334155' }}>{h.answer}</p>
+                    <div style={{ marginTop:6 }}>
+                      <MarkdownRenderer content={h.answer} />
+                    </div>
                     <p style={{ fontSize:12, color:'#94a3b8', marginTop:6 }}>{new Date(h.created_at).toLocaleString()}</p>
                   </motion.div>
                 ))}
@@ -136,14 +147,48 @@ export default function DocumentView() {
             <div>
               <motion.button whileHover={{ scale: 1.02 }} className="btn" disabled={loading} onClick={doExtract}>Extract Important Info</motion.button>
               {extract && (
-                <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} style={{ marginTop:12 }}>
-                  <div className="card">
-                    <h4>Key Points</h4>
-                    <ul style={{ marginTop:8, marginLeft:18 }}>
-                      {extract.key_points?.map((k,i)=><li key={i} style={{ marginBottom:4 }}>{k}</li>)}
+                <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} style={{ marginTop:12, display:'grid', gap:12 }}>
+                  <div className="card markdown">
+                    <h3>Key Points</h3>
+                    <ul>
+                      {extract.key_points?.map((k,i)=><li key={i}>{k}</li>)}
                     </ul>
-                    {extract.summary && <><h4 style={{ marginTop:12 }}>Summary</h4><p style={{ marginTop:6 }}>{extract.summary}</p></>}
-                    {extract.entities?.length>0 && <><h4 style={{ marginTop:12 }}>Entities</h4><p>{extract.entities.join(', ')}</p></>}
+                    {extract.summary && (
+                      <>
+                        <h3 style={{ marginTop:14 }}>Summary</h3>
+                        <MarkdownRenderer content={extract.summary} />
+                      </>
+                    )}
+                  </div>
+
+                  <div className="grid">
+                    <div className="card markdown">
+                      <h3>Entities</h3>
+                      {extract.entities?.length > 0 ? (
+                        <table>
+                          <thead><tr><th>#</th><th>Entity</th></tr></thead>
+                          <tbody>
+                            {extract.entities.map((en, idx) => (
+                              <tr key={idx}><td>{idx+1}</td><td>{en}</td></tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      ) : <p style={{ color:'#64748b' }}>No entities found</p>}
+                    </div>
+
+                    <div className="card markdown">
+                      <h3>Dates & Numbers</h3>
+                      {extract.dates?.length > 0 ? (
+                        <table>
+                          <thead><tr><th>#</th><th>Date / Value</th></tr></thead>
+                          <tbody>
+                            {extract.dates.map((d, idx) => (
+                              <tr key={idx}><td>{idx+1}</td><td>{d}</td></tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      ) : <p style={{ color:'#64748b' }}>No dates detected</p>}
+                    </div>
                   </div>
                 </motion.div>
               )}
@@ -155,11 +200,13 @@ export default function DocumentView() {
               <motion.button whileHover={{ scale: 1.02 }} className="btn" disabled={loading} onClick={genNotes}>Generate Notes</motion.button>
               {notes.map((n, idx)=>(
                 <motion.div key={n.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }} className="card" style={{ marginTop:12 }}>
-                  <div style={{ display:'flex', justifyContent:'space-between' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                     <span style={{ fontSize:12, color:'#64748b' }}>{new Date(n.created_at).toLocaleString()}</span>
                     <motion.button whileHover={{ scale: 1.05 }} className="btn-secondary btn" style={{ padding:'4px 8px', fontSize:12 }} onClick={()=>genQuiz(n.id)}>Make Quiz from these notes</motion.button>
                   </div>
-                  <div className="markdown" style={{ whiteSpace:'pre-wrap', marginTop:8 }}>{n.content}</div>
+                  <div style={{ marginTop:8 }}>
+                    <MarkdownRenderer content={n.content} />
+                  </div>
                 </motion.div>
               ))}
               {notes.length===0 && <p style={{ color:'#64748b', marginTop:8 }}>No notes yet. Click generate.</p>}
@@ -191,4 +238,3 @@ export default function DocumentView() {
     </div>
   )
 }
-

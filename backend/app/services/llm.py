@@ -13,7 +13,7 @@ if not USE_MOCK:
         print(f"openai init failed: {e}")
         USE_MOCK = True
 
-SYSTEM = "You are a helpful document assistant for students. Be concise and accurate."
+SYSTEM = "You are a helpful document assistant for students. Be concise and accurate. Always return readable markdown with headings, bullet lists and tables where helpful. Use GFM tables."
 
 def _call(prompt: str, system=SYSTEM, max_tokens=1200):
     if USE_MOCK:
@@ -31,14 +31,13 @@ def _call(prompt: str, system=SYSTEM, max_tokens=1200):
         return mock(prompt)
 
 def _sentences(text):
-    # naive split, clean
     parts = re.split(r'(?<=[.!?])\s+', text.strip())
     return [p.strip() for p in parts if len(p.strip()) > 20][:20]
 
 def _mock_summarize(text, length):
     sents = _sentences(text)
     if not sents:
-        return f"No readable text found. Document length: {len(text)} chars. (Add OPENAI_API_KEY for AI summary)"
+        return f"### Summary\n\nNo readable text found. Document length: {len(text)} chars. (Add OPENAI_API_KEY for AI summary)"
     if length == "short":
         picks = sents[:3]
     elif length == "detailed":
@@ -46,9 +45,23 @@ def _mock_summarize(text, length):
     else:
         picks = sents[:5]
     bullets = "\n".join([f"- {s[:180]}" for s in picks])
-    prefix = f"Summary ({length}) — extracted from actual document ({len(text)} chars, {len(sents)} sentences):\n\n"
-    suffix = "\n\n*Local summary (no API key). Add OPENAI_API_KEY for AI-powered summary.*"
-    return prefix + bullets + suffix
+    table = f"""| Property | Value |
+|----------|-------|
+| Length | {len(text)} characters |
+| Sentences | {len(sents)} |
+| Pages | approx. {max(1, len(text)//2000)} |
+| Mode | Local extraction |
+"""
+    return f"""# Summary ({length})
+
+{table}
+
+## Key Points
+{bullets}
+
+---
+*Local summary — add `OPENAI_API_KEY` for AI-powered summary.*
+"""
 
 def _mock_answer(text, question):
     sents = _sentences(text)
@@ -62,15 +75,41 @@ def _mock_answer(text, question):
     scored.sort(reverse=True, key=lambda x: x[0])
     if scored and scored[0][0] > 0:
         best = [s for _, s in scored[:3] if _]
-        return f"Based on your document (local search, no API key needed for demo):\n\nQ: {question}\n\nRelevant excerpts:\n- " + "\n- ".join([b[:200] for b in best]) + "\n\n*Add OPENAI_API_KEY for full AI answer.*"
-    # fallback - return first few sents
+        rows = "\n".join([f"| {i+1} | {b[:150].replace('|',' ')} | { 'high' if i==0 else 'medium'} |" for i, b in enumerate(best)])
+        table = f"""| # | Relevant Excerpt | Relevance |
+|---|------------------|-----------|
+{rows}
+"""
+        return f"""## Answer — {question}
+
+{table}
+
+### Explanation
+Based on keyword overlap with your document. The excerpts above are the closest matches found locally.
+
+---
+*Local answer — add `OPENAI_API_KEY` for full AI Q&A with reasoning.*
+"""
     preview = " ".join(sents[:2])[:500] if sents else text[:500]
-    return f"Local answer (no API key): Could not find direct match for '{question}'. Here's the document preview:\n\n{preview}\n\n*Try rephrasing or add OPENAI_API_KEY for AI Q&A.*"
+    table = f"""| Property | Value |
+|----------|-------|
+| Question | {question} |
+| Result | No direct match found |
+| Preview | {preview[:120].replace('|',' ')}... |
+"""
+    return f"""## Answer — {question}
+
+{table}
+
+### Document Preview
+> {preview}
+
+*Try rephrasing or add `OPENAI_API_KEY` for AI Q&A.*
+"""
 
 def _mock_extract(text):
     sents = _sentences(text)
     key_points = sents[:5] if sents else [text[:150]]
-    # naive entities: capitalized words
     caps = re.findall(r'\b[A-Z][a-z]+(?:\s[A-Z][a-z]+){0,2}\b', text)
     entities = list(dict.fromkeys(caps))[:8]
     dates = re.findall(r'\b(?:19|20)\d{2}\b|\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b', text)[:5]
@@ -80,30 +119,78 @@ def _mock_extract(text):
 def _mock_compare(t1, t2):
     s1 = _sentences(t1)
     s2 = _sentences(t2)
-    return f"Comparison (local, no API key):\n\nDocument 1: {len(t1)} chars, {len(s1)} sentences. Preview: { ' '.join(s1[:2])[:250] if s1 else t1[:250]}\n\nDocument 2: {len(t2)} chars, {len(s2)} sentences. Preview: { ' '.join(s2[:2])[:250] if s2 else t2[:250]}\n\nSimilarities: Both are PDFs with text content.\nDifferences: Doc1 is {'longer' if len(t1)>len(t2) else 'shorter'} than Doc2.\n\n*Add OPENAI_API_KEY for AI-powered comparison.*"
+    return f"""# Document Comparison (Local)
+
+| Aspect | Document 1 | Document 2 |
+|--------|------------|------------|
+| Length | {len(t1)} chars | {len(t2)} chars |
+| Sentences | {len(s1)} | {len(s2)} |
+| Avg sentence | {round(len(t1)/max(1,len(s1)))} chars | {round(len(t2)/max(1,len(s2)))} chars |
+| Preview | {(' '.join(s1[:1])[:120].replace('|',' ') if s1 else t1[:120])}... | {(' '.join(s2[:1])[:120].replace('|',' ') if s2 else t2[:120])}... |
+
+## Analysis
+
+### Similarities
+- Both are text-based PDFs
+- Both contain similar sentence structure
+
+### Differences
+- **Size:** Document {'1' if len(t1)>len(t2) else '2'} is larger
+- **Content focus:** Different vocabulary sets
+
+---
+*Local comparison — add `OPENAI_API_KEY` for AI-powered semantic comparison.*
+"""
 
 def _mock_notes(text):
     sents = _sentences(text)
     if not sents:
-        return f"# Notes\n\nNo extractable text.\n\n*Add OPENAI_API_KEY for AI notes.*"
+        return f"# Notes\n\nNo extractable text.\n\n*Add `OPENAI_API_KEY` for AI notes.*"
     bullets = "\n".join([f"- {s[:160]}" for s in sents[:6]])
     terms = re.findall(r'\b[A-Z][a-z]{3,}\b', text)
-    terms = list(dict.fromkeys(terms))[:6]
-    terms_md = "\n".join([f"- **{t}**: appears in document" for t in terms]) if terms else "- No distinct terms found"
-    preview = text[:800]
-    return f"# Study Notes (local)\n\n## Key Takeaways\n{bullets}\n\n## Important Terms\n{terms_md}\n\n## Summary\n{' '.join(sents[:3])[:500]}\n\n*Generated locally without AI. Add OPENAI_API_KEY for smarter notes.*"
+    terms = list(dict.fromkeys(terms))[:8]
+    if terms:
+        rows = "\n".join([f"| {t} | appears in document, relevant term |" for t in terms])
+        term_table = f"""| Term | Context |
+|------|---------|
+{rows}
+"""
+    else:
+        term_table = "| Term | Context |\n|------|---------|\n| — | No distinct capitalized terms found |"
+    summary = ' '.join(sents[:3])[:500]
+    table = f"""| Stat | Value |
+|------|-------|
+| Total sentences | {len(sents)} |
+| Document length | {len(text)} chars |
+"""
+    return f"""# Study Notes (Local)
+
+{table}
+
+## Key Takeaways
+{bullets}
+
+## Important Terms
+
+{term_table}
+
+## Summary
+
+{summary}
+
+---
+
+*Generated locally without AI. Add `OPENAI_API_KEY` for smarter, structured notes with tables.*
+"""
 
 def _mock_quiz(text, n):
     sents = _sentences(text)
-    # generate from actual sentences
     questions = []
     for i in range(min(n, len(sents))):
         sent = sents[i][:120]
-        # create simple question from sentence
         words = sent.split()
         if len(words) < 5:
             continue
-        # pick a keyword to blank
         keyword = None
         for w in words:
             if len(w) > 5 and w[0].isupper():
@@ -112,7 +199,6 @@ def _mock_quiz(text, n):
         if not keyword:
             keyword = words[len(words)//2].strip('.,!?')
         q_text = sent.replace(keyword, "_____", 1) if keyword in sent else f"What does this mean: '{sent[:60]}...'?"
-        # options: keyword + distractors from other words
         other_words = [w.strip('.,!?') for s in sents for w in s.split() if len(w)>4][:10]
         opts = [keyword]
         for w in other_words:
@@ -120,15 +206,12 @@ def _mock_quiz(text, n):
                 opts.append(w)
         while len(opts) < 4:
             opts.append(f"Option {len(opts)+1}")
-        # shuffle deterministically but keep correct at 0 for simplicity, then rotate?
-        # keep correct_index 0 for now, but frontend handles any
         questions.append({
             "question": f"Fill in the blank: {q_text}" if "_____" in q_text else q_text,
             "options": opts[:4],
             "correct_index": 0,
             "explanation": f"Answer is '{keyword}' from document."
         })
-    # fallback if not enough sents
     while len(questions) < n:
         questions.append({
             "question": f"What is mentioned in the document? (Q{len(questions)+1})",
@@ -139,10 +222,8 @@ def _mock_quiz(text, n):
     return questions[:n]
 
 def mock(prompt: str):
-    # fallback old behavior for direct _call without text context
     low = prompt.lower()
     if "summarize" in low:
-        # try extract text between --- or after
         m = re.search(r'---\n(.*?)\n---', prompt, re.S)
         txt = m.group(1) if m else prompt
         return _mock_summarize(txt, "medium")
@@ -167,15 +248,15 @@ def summarize_text(text: str, length="medium"):
         return _mock_summarize(text, length)
     t = text[:12000]
     instr = {"short":"in 3-4 bullets very concise","medium":"in 200-300 words with bullets","detailed":"in detail ~500 words"}.get(length,"in 200-300 words")
-    prompt = f"Summarize this document {instr}:\n\n---\n{t}\n---"
-    return _call(prompt, max_tokens=700 if length!="detailed" else 1100)
+    prompt = f"Summarize this document {instr}. Return markdown with: # Summary, a table (| Property | Value |) with stats, ## Key Points bullet list, and ## Takeaway. Use tables where helpful.\n\n---\n{t}\n---"
+    return _call(prompt, max_tokens=800 if length!="detailed" else 1100)
 
 def answer_question(text: str, question: str):
     if USE_MOCK:
         return _mock_answer(text, question)
     t = text[:10000]
-    prompt = f"Document:\n{t}\n\nQuestion: {question}\n\nAnswer based only on doc. If not found say so. Simple language."
-    return _call(prompt, system="You are a helpful teaching assistant. Explain simply.")
+    prompt = f"Document:\n{t}\n\nQuestion: {question}\n\nAnswer based only on doc. If not found say so. Format in markdown with ## Answer heading and a table if structured data is relevant. Use simple language."
+    return _call(prompt, system="You are a helpful teaching assistant. Explain simply. Always use readable markdown with tables and headings.")
 
 def extract_info(text: str):
     if USE_MOCK:
@@ -194,13 +275,13 @@ def extract_info(text: str):
 def compare_docs(t1: str, t2: str):
     if USE_MOCK:
         return _mock_compare(t1, t2)
-    prompt = f"Compare these two docs - similarities, differences, which more detailed. Be structured.\n\nDoc1:\n{t1[:7000]}\n\nDoc2:\n{t2[:7000]}"
+    prompt = f"Compare these two docs. Return markdown with # Comparison, a table | Aspect | Document 1 | Document 2 |, then ## Similarities and ## Differences with bullet lists. Be structured.\n\nDoc1:\n{t1[:7000]}\n\nDoc2:\n{t2[:7000]}"
     return _call(prompt, max_tokens=900)
 
 def generate_notes(text: str):
     if USE_MOCK:
         return _mock_notes(text)
-    prompt = f"Create study notes from this doc. Use markdown headings, bullets, key terms, summary. Student-friendly.\n\nDoc:\n{text[:12000]}"
+    prompt = f"Create study notes from this doc. Use markdown: # Title, a stats table (| Stat | Value |), ## Key Takeaways bullets, ## Important Terms table (| Term | Definition |), ## Summary. Student-friendly, use tables.\n\nDoc:\n{text[:12000]}"
     return _call(prompt, max_tokens=1000)
 
 def generate_quiz(text: str, n=5):

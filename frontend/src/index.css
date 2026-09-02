@@ -19,9 +19,22 @@ nav .links a:hover { color: #0f172a; }
 .tab { padding:10px 14px; cursor:pointer; border-bottom:2px solid transparent; font-size:14px; white-space:nowrap; }
 .tab.active { border-color:#0f172a; font-weight:600; }
 .badge { background:#f1f5f9; padding:2px 8px; border-radius:999px; font-size:12px; }
-.markdown { line-height:1.6; }
-.markdown h1,h2,h3 { margin:12px 0 8px; }
-.markdown ul { margin-left:18px; }
+.markdown { line-height:1.7; font-size:14px; }
+.markdown h1 { font-size:22px; margin:16px 0 10px; border-bottom:1px solid #e2e8f0; padding-bottom:6px; }
+.markdown h2 { font-size:18px; margin:14px 0 8px; color:#0f172a; }
+.markdown h3 { font-size:15px; margin:12px 0 6px; color:#1e293b; }
+.markdown ul, .markdown ol { margin-left:22px; margin-bottom:10px; }
+.markdown li { margin-bottom:4px; }
+.markdown p { margin-bottom:10px; }
+.markdown blockquote { border-left:3px solid #e2e8f0; padding-left:12px; color:#475569; margin:10px 0; }
+.markdown code { background:#f1f5f9; padding:2px 6px; border-radius:4px; font-size:13px; }
+.markdown pre { background:#0f172a; color:#f1f5f9; padding:14px; border-radius:8px; overflow-x:auto; margin:10px 0; }
+.markdown pre code { background:transparent; color:inherit; padding:0; }
+.markdown table { width:100%; border-collapse:collapse; margin:12px 0; font-size:13px; }
+.markdown th { background:#f8fafc; font-weight:600; text-align:left; border:1px solid #e2e8f0; padding:8px 10px; }
+.markdown td { border:1px solid #e2e8f0; padding:8px 10px; vertical-align:top; }
+.markdown tr:nth-child(even) td { background:#f8fafc; }
+.markdown hr { border:none; border-top:1px solid #e2e8f0; margin:14px 0; }
 .quiz-opt { padding:10px; border:1px solid #e2e8f0; border-radius:8px; margin:6px 0; cursor:pointer; }
 .quiz-opt.selected { border-color:#0f172a; background:#f8fafc; }
 .quiz-opt.correct { border-color:#16a34a; background:#f0fdf4; }

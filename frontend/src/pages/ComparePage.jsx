@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import api from '../api/client'
+import MarkdownRenderer from '../components/MarkdownRenderer'
 
 export default function ComparePage() {
   const [docs, setDocs] = useState([])
@@ -44,13 +45,12 @@ export default function ComparePage() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0 }}
             className="card"
-            style={{ marginTop:16, whiteSpace:'pre-wrap' }}
+            style={{ marginTop:16 }}
           >
-            {result}
+            <MarkdownRenderer content={result} />
           </motion.div>
         )}
       </AnimatePresence>
     </div>
   )
 }
-
