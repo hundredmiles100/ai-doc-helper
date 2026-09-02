@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 export default function Navbar() {
   const loc = useLocation()
   const isActive = (p) => loc.pathname === p
+  const showApiDocs = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || import.meta.env.DEV)
 
   return (
     <motion.nav
@@ -41,24 +42,26 @@ export default function Navbar() {
             </Link>
           </motion.div>
         ))}
-        <motion.a
-          href="http://localhost:8000/docs"
-          target="_blank"
-          rel="noreferrer"
-          whileHover={{ y: -1 }}
-          style={{
-            marginLeft: 6,
-            padding: '7px 12px',
-            borderRadius: 10,
-            border: '1px solid #e2e8f0',
-            background: 'white',
-            fontSize: 13,
-            fontWeight: 600,
-            color: '#475569'
-          }}
-        >
-          API Docs ↗
-        </motion.a>
+        {showApiDocs && (
+          <motion.a
+            href="http://localhost:8000/docs"
+            target="_blank"
+            rel="noreferrer"
+            whileHover={{ y: -1 }}
+            style={{
+              marginLeft: 6,
+              padding: '7px 12px',
+              borderRadius: 10,
+              border: '1px solid #e2e8f0',
+              background: 'white',
+              fontSize: 13,
+              fontWeight: 600,
+              color: '#475569'
+            }}
+          >
+            API Docs ↗
+          </motion.a>
+        )}
       </div>
     </motion.nav>
   )
