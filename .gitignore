@@ -1,0 +1,28 @@
+# python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+env/
+*.db
+*.sqlite
+.env
+
+# node
+node_modules/
+dist/
+dist-ssr/
+*.local
+frontend/dist/
+
+# uploads
+backend/uploads/*.pdf
+!backend/uploads/.gitkeep
+
+# os
+.DS_Store
+Thumbs.db
+
+# logs
+*.log
