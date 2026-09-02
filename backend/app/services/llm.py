@@ -16,9 +16,9 @@ if not USE_MOCK:
         print(f"openai init failed: {e}")
         USE_MOCK = True
 
-SYSTEM = "You are a helpful document assistant for students. Be concise and accurate. Always return readable markdown with headings, bullet lists and tables where helpful. Use GFM tables."
+SYSTEM = "You are a thorough, detailed document assistant for students. Be comprehensive and explanatory — give in-depth answers with examples, context and structured tables. Always return readable markdown with headings, bullet lists and GFM tables. Avoid overly brief replies."
 
-def _call(prompt: str, system=SYSTEM, max_tokens=1200):
+def _call(prompt: str, system=SYSTEM, max_tokens=2200):
     if USE_MOCK:
         return mock(prompt)
     try:
@@ -249,17 +249,17 @@ def mock(prompt: str):
 def summarize_text(text: str, length="medium"):
     if USE_MOCK:
         return _mock_summarize(text, length)
-    t = text[:12000]
-    instr = {"short":"in 3-4 bullets very concise","medium":"in 200-300 words with bullets","detailed":"in detail ~500 words"}.get(length,"in 200-300 words")
-    prompt = f"Summarize this document {instr}. Return markdown with: # Summary, a table (| Property | Value |) with stats, ## Key Points bullet list, and ## Takeaway. Use tables where helpful.\n\n---\n{t}\n---"
-    return _call(prompt, max_tokens=800 if length!="detailed" else 1100)
+    t = text[:15000]
+    instr = {"short":"in 150-200 words with 5-6 detailed bullets and examples","medium":"in 350-500 words with detailed bullets, tables and examples","detailed":"in 700-900 words comprehensive, with sections, tables, examples and thorough takeaways"}.get(length,"in 350-500 words with detailed bullets, tables and examples")
+    prompt = f"Summarize this document {instr}. Be thorough, not brief. Return markdown with: # Summary, a detailed table (| Property | Value |) with stats (word count, themes, purpose), ## Key Points (7-10 detailed bullets with explanations), ## Detailed Analysis, and ## Takeaway. Use tables where helpful.\n\n---\n{t}\n---"
+    return _call(prompt, max_tokens=1800 if length!="detailed" else 2600)
 
 def answer_question(text: str, question: str):
     if USE_MOCK:
         return _mock_answer(text, question)
-    t = text[:10000]
-    prompt = f"Document:\n{t}\n\nQuestion: {question}\n\nAnswer based only on doc. If not found say so. Format in markdown with ## Answer heading and a table if structured data is relevant. Use simple language."
-    return _call(prompt, system="You are a helpful teaching assistant. Explain simply. Always use readable markdown with tables and headings.")
+    t = text[:15000]
+    prompt = f"Document:\n{t}\n\nQuestion: {question}\n\nAnswer THOROUGHLY and in detail based only on the document. If not found, say so but suggest related context. Be comprehensive: use 300-500 words, examples, step-by-step explanations, and markdown with ## Answer heading, bullet lists, and a table (| Aspect | Details |) where helpful. Do NOT give a brief 2-3 line answer. Use simple language but be in-depth."
+    return _call(prompt, system="You are a thorough, patient teaching assistant. Explain in depth with examples and structure. Always use detailed markdown with tables and headings. Avoid short answers.", max_tokens=2200)
 
 def extract_info(text: str):
     if USE_MOCK:
@@ -278,14 +278,14 @@ def extract_info(text: str):
 def compare_docs(t1: str, t2: str):
     if USE_MOCK:
         return _mock_compare(t1, t2)
-    prompt = f"Compare these two docs. Return markdown with # Comparison, a table | Aspect | Document 1 | Document 2 |, then ## Similarities and ## Differences with bullet lists. Be structured.\n\nDoc1:\n{t1[:7000]}\n\nDoc2:\n{t2[:7000]}"
-    return _call(prompt, max_tokens=900)
+    prompt = f"Compare these two docs IN DEPTH. Return markdown with # Comparison, a detailed table | Aspect | Document 1 | Document 2 | (use 6-8 rows: purpose, key topics, methodology, findings, tone), then ## Similarities (5-7 detailed bullets) and ## Differences (5-7 detailed bullets) and ## Verdict. Be thorough, 400-600 words.\n\nDoc1:\n{t1[:8000]}\n\nDoc2:\n{t2[:8000]}"
+    return _call(prompt, max_tokens=2000)
 
 def generate_notes(text: str):
     if USE_MOCK:
         return _mock_notes(text)
-    prompt = f"Create study notes from this doc. Use markdown: # Title, a stats table (| Stat | Value |), ## Key Takeaways bullets, ## Important Terms table (| Term | Definition |), ## Summary. Student-friendly, use tables.\n\nDoc:\n{text[:12000]}"
-    return _call(prompt, max_tokens=1000)
+    prompt = f"Create DETAILED study notes from this doc (400-600 words). Use markdown: # Title, a stats table (| Stat | Value |), ## Key Takeaways (8-10 detailed bullets with explanations), ## Important Terms table (| Term | Definition | 6-10 rows), ## Summary (150+ words), ## Revision Questions (3-5). Be comprehensive and student-friendly, use tables.\n\nDoc:\n{text[:15000]}"
+    return _call(prompt, max_tokens=2200)
 
 def generate_quiz(text: str, n=5):
     if USE_MOCK:
