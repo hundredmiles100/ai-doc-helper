@@ -89,7 +89,7 @@ export default function Dashboard() {
       <div className="grid" style={{ marginTop: 16, gridTemplateColumns: 'repeat(3, 1fr)' }}>
         {[
           { label: 'Documents', value: docs.length, sub: `${totalPages} pages total`, icon: '📚' },
-          { label: 'AI Ready', value: docs.length ? 'Mock → Real' : '—', sub: 'Add OPENAI_API_KEY', icon: '⚡' },
+          { label: 'AI Ready', value: 'Groq Active', sub: 'openai/gpt-oss-20b • detailed', icon: '⚡' },
           { label: 'Features', value: '6-in-1', sub: 'Summarize • Chat • Extract', icon: '✨' },
         ].map((s, i) => (
           <motion.div
