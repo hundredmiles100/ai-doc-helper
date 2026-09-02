@@ -1,6 +1,6 @@
 import json
 import re
-from ..config import OPENAI_API_KEY, OPENAI_MODEL
+from ..config import OPENAI_API_KEY, OPENAI_MODEL, OPENAI_BASE_URL
 
 USE_MOCK = not OPENAI_API_KEY or OPENAI_API_KEY.strip() == ""
 client = None
@@ -8,7 +8,10 @@ client = None
 if not USE_MOCK:
     try:
         from openai import OpenAI
-        client = OpenAI(api_key=OPENAI_API_KEY)
+        kwargs = {"api_key": OPENAI_API_KEY}
+        if OPENAI_BASE_URL and OPENAI_BASE_URL.strip():
+            kwargs["base_url"] = OPENAI_BASE_URL.strip()
+        client = OpenAI(**kwargs)
     except Exception as e:
         print(f"openai init failed: {e}")
         USE_MOCK = True
