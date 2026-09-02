@@ -33,7 +33,7 @@ def mock(prompt: str):
     low = prompt.lower()
     if "summarize" in low:
         return "Mock Summary: This document covers the main topics concisely. Key themes include intro, core concepts, findings and conclusion. (Add OPENAI_API_KEY for real AI summaries.)\n\n- Overview of content\n- Important details extracted\n- Conclusion and takeaways"
-    if "quiz" in low:
+    if "quiz" in low or "mcq" in low or "multiple choice" in low:
         return json.dumps([
             {"question":"What is the main topic?","options":["History","Science","Based on uploaded content","None"],"correct_index":2,"explanation":"mock - add api key for real"},
             {"question":"Which section was most detailed?","options":["Intro","Methods","Chapter 4","Conclusion"],"correct_index":2,"explanation":"mock"},
@@ -81,16 +81,18 @@ def generate_notes(text: str):
     return _call(prompt, max_tokens=1000)
 
 def generate_quiz(text: str, n=5):
-    prompt = f"Generate {n} MCQ questions from this doc. Return ONLY JSON array with fields: question, options (4 strings), correct_index (0-3), explanation.\n\nDoc:\n{text[:10000]}"
+    prompt = f"Generate {n} MCQ quiz questions from this doc. Return ONLY JSON array with fields: question, options (4 strings), correct_index (0-3), explanation.\n\nDoc:\n{text[:10000]}"
     raw = _call(prompt, max_tokens=1200)
     try:
         s = raw.find("["); e = raw.rfind("]")+1
         if s!=-1:
-            return json.loads(raw[s:e])
-        return json.loads(raw)
+            data = json.loads(raw[s:e])
+            return data[:n]
+        return json.loads(raw)[:n]
     except Exception as e:
         print(f"quiz parse fail {e}")
         try:
-            return json.loads(mock("quiz"))
+            data = json.loads(mock("quiz"))
+            return data[:n]
         except:
             return []
