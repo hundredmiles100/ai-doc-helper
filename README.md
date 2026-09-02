@@ -14,17 +14,34 @@ example: upload a textbook -> ask "explain chapter 4 in simple language" -> get 
 
 ### Backend
 ```bash
+# bash / mac / linux
 cd backend
 pip install -r requirements.txt
 # create .env - copy from .env.example
 # set OPENAI_API_KEY if you have one, otherwise it runs in mock mode
 uvicorn app.main:app --reload --port 8000
 ```
+
+```powershell
+# windows powershell (don't use &&)
+cd "C:\project ultra 6\backend"
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+# or one-liner: cd "C:\project ultra 6\backend"; if ($?) { pip install -r requirements.txt }; if ($?) { uvicorn app.main:app --reload --port 8000 }
+```
 API at http://localhost:8000 - docs at /docs
 
 ### Frontend
 ```bash
+# bash
 cd frontend
+npm install
+npm run dev
+```
+
+```powershell
+# windows powershell
+cd "C:\project ultra 6\frontend"
 npm install
 npm run dev
 ```
