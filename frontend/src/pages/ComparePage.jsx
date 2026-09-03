@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import api from '../api/client'
-import MarkdownRenderer from '../components/MarkdownRenderer'
+import ClaudeAnswer from '../components/ClaudeAnswer'
 import { toast } from '../components/Toast'
 
 export default function ComparePage() {
@@ -81,19 +81,19 @@ export default function ComparePage() {
       </motion.div>
 
       <AnimatePresence>
-        {result && (
-          <motion.div
-            initial={{ opacity: 0, y: 12, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0 }}
-            className="liquid-glass"
-            style={{ marginTop:16, padding: 18 }}
-          >
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
-              <h3 style={{ fontSize:14, fontWeight: 700 }}>Result</h3>
-              <button className="btn-secondary btn" style={{ padding:'6px 12px', fontSize:12, borderRadius: 999 }} onClick={() => { navigator.clipboard.writeText(result); toast('Copied', 'success') }}>Copy</button>
-            </div>
-            <MarkdownRenderer content={result} />
+        {loading && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ marginTop: 16 }}>
+            <ClaudeAnswer loading={true} variant="compare" question={`${selA?.original_name || 'Doc A'} vs ${selB?.original_name || 'Doc B'}`} />
+          </motion.div>
+        )}
+        {result && !loading && (
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} style={{ marginTop: 16 }}>
+            <ClaudeAnswer
+              question={`${selA?.original_name || 'Document A'} vs ${selB?.original_name || 'Document B'}`}
+              answer={result}
+              variant="compare"
+              onRetry={compare}
+            />
           </motion.div>
         )}
       </AnimatePresence>

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import api from '../api/client'
 import QuizView from '../components/QuizView'
 import MarkdownRenderer from '../components/MarkdownRenderer'
+import ClaudeAnswer, { ClaudeHistoryItem } from '../components/ClaudeAnswer'
 import { toast } from '../components/Toast'
 
 export default function DocumentView() {
@@ -25,22 +26,29 @@ export default function DocumentView() {
     api.get(`/quiz/${id}`).then(r => setQuizzes(r.data)).catch(() => {})
   }, [id])
 
+  const [summaryLen, setSummaryLen] = useState('medium')
+  const [lastQuestion, setLastQuestion] = useState('')
+
   const doSummary = async (len) => {
+    const l = len || summaryLen
+    setSummaryLen(l)
     setLoading(true)
     try {
-      const res = await api.post(`/summarize/${id}`, { length: len })
+      const res = await api.post(`/summarize/${id}`, { length: l })
       setSummary(res.data.summary)
       toast('Summary ready', 'success')
     } catch (e) { toast(e.response?.data?.detail || 'Could not summarize', 'error') }
     setLoading(false)
   }
 
-  const ask = async () => {
-    if (!qa.question.trim()) return
+  const ask = async (qOverride) => {
+    const q = (qOverride ?? qa.question).trim()
+    if (!q) return
+    setLastQuestion(q)
     setLoading(true)
     try {
-      const res = await api.post('/ask', { document_id: Number(id), question: qa.question })
-      setQa(s => ({ ...s, answer: res.data.answer, history: [{ question: qa.question, answer: res.data.answer, created_at: new Date().toISOString() }, ...s.history], question: '' }))
+      const res = await api.post('/ask', { document_id: Number(id), question: q })
+      setQa(s => ({ ...s, answer: res.data.answer, history: [{ question: q, answer: res.data.answer, created_at: new Date().toISOString() }, ...s.history], question: '' }))
       toast('Answer ready', 'success')
     } catch { toast('Could not answer — try again', 'error') }
     setLoading(false)
@@ -137,16 +145,20 @@ export default function DocumentView() {
           {tab==='summary' && (
             <div>
               <div style={{ display:'flex', gap:8, marginBottom:14, flexWrap: 'wrap', alignItems:'center' }}>
-                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} className="btn" disabled={loading} onClick={()=>doSummary('short')} style={{ borderRadius: 999 }}>Short</motion.button>
-                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} className="btn" disabled={loading} onClick={()=>doSummary('medium')} style={{ borderRadius: 999 }}>Balanced</motion.button>
-                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} className="btn" disabled={loading} onClick={()=>doSummary('detailed')} style={{ borderRadius: 999 }}>Detailed</motion.button>
+                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} className={summaryLen==='short'?'btn':'btn-secondary btn'} disabled={loading} onClick={()=>doSummary('short')} style={{ borderRadius: 999 }}>Short</motion.button>
+                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} className={summaryLen==='medium'?'btn':'btn-secondary btn'} disabled={loading} onClick={()=>doSummary('medium')} style={{ borderRadius: 999 }}>Balanced</motion.button>
+                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} className={summaryLen==='detailed'?'btn':'btn-secondary btn'} disabled={loading} onClick={()=>doSummary('detailed')} style={{ borderRadius: 999 }}>Detailed</motion.button>
                 {loading && <span className="shimmer" style={{ height: 8, width: 80, borderRadius: 999, display:'inline-block' }} />}
-                {summary && <button className="btn-secondary btn" onClick={() => copyText(summary)} style={{ marginLeft: 'auto', borderRadius: 999 }}>Copy</button>}
               </div>
-              {summary ? (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="liquid-glass" style={{ padding: 18 }}>
-                  <MarkdownRenderer content={summary} />
-                </motion.div>
+              {loading && !summary ? (
+                <ClaudeAnswer loading={true} variant="summary" question={`Summarize (${summaryLen})`} />
+              ) : summary ? (
+                <ClaudeAnswer
+                  question={`Summarize — ${summaryLen}`}
+                  answer={summary}
+                  variant="summary"
+                  onRetry={() => doSummary(summaryLen)}
+                />
               ) : <p style={{ color:'#64748b', fontSize: 14, lineHeight: 1.6 }}>Choose a length above — we’ll create a clear, readable summary for you.</p>}
             </div>
           )}
@@ -155,31 +167,34 @@ export default function DocumentView() {
             <div>
               <div style={{ display:'flex', gap:8 }}>
                 <input className="input" placeholder='Ask anything about this document…' value={qa.question} onChange={e=>setQa({...qa, question:e.target.value})} onKeyDown={e=>e.key==='Enter'&&ask()} />
-                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} className="btn" disabled={loading} onClick={ask} style={{ borderRadius: 999, padding: '12px 18px' }}>{loading ? '…' : 'Ask'}</motion.button>
+                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} className="btn" disabled={loading} onClick={()=>ask()} style={{ borderRadius: 999, padding: '12px 18px' }}>{loading ? '…' : 'Ask'}</motion.button>
               </div>
               <div style={{ display:'flex', gap:6, marginTop:10, flexWrap:'wrap' }}>
                 {['Explain simply', 'Key takeaways', 'What’s the conclusion?'].map(q => (
                   <button key={q} className="btn-secondary btn" style={{ fontSize:12, padding:'7px 12px', borderRadius:999 }} onClick={() => setQa(s=>({...s, question:q}))}>{q}</button>
                 ))}
               </div>
-              {qa.answer && (
-                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="liquid-glass" style={{ marginTop:14, padding: 16 }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
-                    <strong style={{ fontSize:13 }}>Answer</strong>
-                    <button className="btn-secondary btn" style={{ padding:'6px 10px', fontSize:12, borderRadius: 999 }} onClick={() => copyText(qa.answer)}>Copy</button>
-                  </div>
-                  <MarkdownRenderer content={qa.answer} />
-                </motion.div>
+
+              {loading && (
+                <div style={{ marginTop: 14 }}>
+                  <ClaudeAnswer loading={true} variant="answer" question={qa.question || lastQuestion} />
+                </div>
               )}
+
+              {qa.answer && !loading && (
+                <div style={{ marginTop: 14 }}>
+                  <ClaudeAnswer
+                    question={qa.history[0]?.question || lastQuestion}
+                    answer={qa.answer}
+                    variant="answer"
+                    onRetry={() => ask(qa.history[0]?.question || lastQuestion)}
+                  />
+                </div>
+              )}
+
               <div style={{ marginTop:16, display:'grid', gap:10 }}>
-                {qa.history.map((h,i)=>(
-                  <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }} className="liquid-glass" style={{ padding:14 }}>
-                    <p style={{ fontWeight:700, fontSize:13 }}>Q: {h.question}</p>
-                    <div style={{ marginTop:8 }}>
-                      <MarkdownRenderer content={h.answer} />
-                    </div>
-                    <p style={{ fontSize:11, color:'#94a3b8', marginTop:6 }}>{new Date(h.created_at).toLocaleString()}</p>
-                  </motion.div>
+                {qa.history.slice(qa.answer ? 1 : 0).map((h,i)=>(
+                  <ClaudeHistoryItem key={i} question={h.question} answer={h.answer} created_at={h.created_at} onRetry={() => ask(h.question)} />
                 ))}
               </div>
             </div>
@@ -237,21 +252,24 @@ export default function DocumentView() {
                 <motion.button whileHover={{ scale: 1.02 }} className="btn" disabled={loading} onClick={genNotes} style={{ borderRadius: 999 }}>{loading ? 'Creating…' : 'Create study notes'}</motion.button>
                 <span style={{ fontSize:12, color:'#64748b' }}>{notes.length ? `${notes.length} saved` : 'No notes yet'}</span>
               </div>
+              {loading && notes.length===0 && (
+                <div style={{ marginTop: 12 }}><ClaudeAnswer loading={true} variant="notes" question="Create study notes" /></div>
+              )}
               {notes.map((n, idx)=>(
-                <motion.div key={n.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.03 }} className="liquid-glass" style={{ marginTop:12, padding: 16 }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:8, flexWrap:'wrap' }}>
-                    <span style={{ fontSize:11, color:'#64748b', background:'rgba(255,255,255,0.7)', padding:'5px 10px', borderRadius:999, border: '1px solid rgba(255,255,255,0.9)' }}>{new Date(n.created_at).toLocaleString()}</span>
-                    <div style={{ display:'flex', gap:6 }}>
-                      <button className="btn-secondary btn" style={{ padding:'6px 10px', fontSize:12, borderRadius: 999 }} onClick={() => copyText(n.content)}>Copy</button>
-                      <motion.button whileHover={{ scale: 1.03 }} className="btn" style={{ padding:'6px 12px', fontSize:12, borderRadius: 999 }} onClick={()=>genQuiz(n.id)}>Make quiz</motion.button>
-                    </div>
+                <div key={n.id} style={{ marginTop: 12 }}>
+                  <ClaudeAnswer
+                    question="Study notes"
+                    answer={n.content}
+                    variant="notes"
+                    meta={new Date(n.created_at).toLocaleString()}
+                    onRetry={genNotes}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+                    <motion.button whileHover={{ scale: 1.02 }} className="btn" style={{ padding:'6px 14px', fontSize:12, borderRadius: 999 }} onClick={()=>genQuiz(n.id)}>Make quiz from these notes</motion.button>
                   </div>
-                  <div style={{ marginTop:12 }}>
-                    <MarkdownRenderer content={n.content} />
-                  </div>
-                </motion.div>
+                </div>
               ))}
-              {notes.length===0 && <p style={{ color:'#64748b', marginTop:12, fontSize: 13 }}>Tap “Create study notes” to get a tidy, ready-to-revise version of your document.</p>}
+              {notes.length===0 && !loading && <p style={{ color:'#64748b', marginTop:12, fontSize: 13 }}>Tap “Create study notes” to get a tidy, ready-to-revise version of your document.</p>}
             </div>
           )}
 
