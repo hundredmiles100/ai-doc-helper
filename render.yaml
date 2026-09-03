@@ -21,6 +21,10 @@ services:
         value: https://api.groq.com/openai/v1
       - key: MAX_UPLOAD_MB
         value: 20
+      - key: SECRET_KEY
+        sync: false
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: 10080
     autoDeploy: true
 
 databases:

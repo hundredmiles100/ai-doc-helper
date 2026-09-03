@@ -2,9 +2,27 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .database import Base, engine
-from .routers import documents, ai
+from .routers import documents, ai, auth
 
 Base.metadata.create_all(bind=engine)
+
+# --- lightweight migration: add user_id to documents if missing (sqlite without alembic) ---
+try:
+    from sqlalchemy import inspect, text
+    insp = inspect(engine)
+    if "documents" in insp.get_table_names():
+        cols = [c["name"] for c in insp.get_columns("documents")]
+        if "user_id" not in cols:
+            # add column nullable
+            with engine.begin() as conn:
+                # sqlite needs simple ALTER
+                conn.execute(text("ALTER TABLE documents ADD COLUMN user_id INTEGER REFERENCES users(id)"))
+            print("migrated: added documents.user_id")
+    if "users" not in insp.get_table_names():
+        # ensure users created (create_all already did, but double check)
+        Base.metadata.create_all(bind=engine)
+except Exception as e:
+    print(f"migration check failed: {e}")
 
 # hide docs in production unless ENABLE_DOCS=true
 ENV = os.getenv("ENV", "development")
@@ -23,6 +41,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
 app.include_router(documents.router)
 app.include_router(ai.router)
 

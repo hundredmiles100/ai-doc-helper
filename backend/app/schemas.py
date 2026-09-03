@@ -21,3 +21,22 @@ class CompareRequest(BaseModel):
     doc_id_1: int
     doc_id_2: int
     lang: Optional[str] = "en"
+
+class UserCreate(BaseModel):
+    username: str
+    password: str
+    email: Optional[str] = None
+
+class UserOut(BaseModel):
+    id: int
+    username: str
+    email: Optional[str] = None
+    created_at: datetime
+    class Config:
+        from_attributes = True
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    username: str
+    user_id: int

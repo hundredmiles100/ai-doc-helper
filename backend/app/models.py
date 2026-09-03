@@ -3,9 +3,19 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 from .database import Base
 
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(100), unique=True, index=True, nullable=False)
+    email = Column(String(255), unique=True, index=True, nullable=True)
+    hashed_password = Column(String(255), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    documents = relationship("Document", back_populates="owner", cascade="all, delete-orphan")
+
 class Document(Base):
     __tablename__ = "documents"
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
     filename = Column(String(255), nullable=False)
     original_name = Column(String(255))
     file_path = Column(String(500))
@@ -13,6 +23,7 @@ class Document(Base):
     content_text = Column(Text)
     page_count = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
+    owner = relationship("User", back_populates="documents")
     summaries = relationship("Summary", back_populates="document", cascade="all, delete-orphan")
     questions = relationship("QAHistory", back_populates="document", cascade="all, delete-orphan")
 

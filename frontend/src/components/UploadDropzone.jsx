@@ -10,7 +10,7 @@ export default function UploadDropzone({ onUploaded }) {
 
   const upload = async (file) => {
     if (!file || !file.name.toLowerCase().endsWith('.pdf')) {
-      toast('Only PDF files allowed', 'error')
+      toast('Please choose a PDF file', 'error')
       return
     }
     setLoading(true)
@@ -22,7 +22,7 @@ export default function UploadDropzone({ onUploaded }) {
       const res = await api.post('/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
       clearInterval(interval)
       setProgress(100)
-      toast(`Uploaded ${file.name} — ${res.data.page_count} pages`, 'success')
+      toast(`Added “${file.name}”`, 'success')
       setTimeout(() => {
         onUploaded && onUploaded(res.data)
         setProgress(0)
@@ -30,7 +30,7 @@ export default function UploadDropzone({ onUploaded }) {
       }, 400)
     } catch (e) {
       clearInterval(interval)
-      toast(e.response?.data?.detail || 'Upload failed', 'error')
+      toast(e.response?.data?.detail || 'Upload failed — try again', 'error')
       setLoading(false)
       setProgress(0)
     }
@@ -57,10 +57,11 @@ export default function UploadDropzone({ onUploaded }) {
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-              style={{ width: 32, height: 32, border: '3px solid #e2e8f0', borderTopColor: '#4f46e5', borderRadius: '50%', margin: '0 auto 10px' }}
+              style={{ width: 32, height: 32, border: '3px solid rgba(255,255,255,0.9)', borderTopColor: '#4f46e5', borderRadius: '50%', margin: '0 auto 10px', background: 'rgba(255,255,255,0.6)' }}
             />
-            <p style={{ fontWeight: 600 }}>Uploading… {progress}%</p>
-            <div style={{ height: 4, background: '#f1f5f9', borderRadius: 999, marginTop: 12, overflow: 'hidden', maxWidth: 220, margin: '12px auto 0' }}>
+            <p style={{ fontWeight: 650, fontSize: 14 }}>Uploading… {progress}%</p>
+            <p style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>Keeping it private to you</p>
+            <div style={{ height: 6, background: 'rgba(255,255,255,0.7)', borderRadius: 999, marginTop: 12, overflow: 'hidden', maxWidth: 220, margin: '12px auto 0', border: '1px solid rgba(255,255,255,0.9)' }}>
               <motion.div animate={{ width: `${progress}%` }} transition={{ ease: 'easeOut' }} style={{ height: '100%', background: 'linear-gradient(90deg, #4f46e5, #06b6d4)', borderRadius: 999 }} />
             </div>
           </motion.div>
@@ -69,15 +70,11 @@ export default function UploadDropzone({ onUploaded }) {
             <motion.div
               animate={{ y: [0, -4, 0] }}
               transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
-              style={{ fontSize: 28, marginBottom: 8 }}
-            >📄</motion.div>
-            <p style={{ fontWeight: 700, fontSize: 15 }}>Drop PDF here or click to browse</p>
-            <p style={{ fontSize: 13, color: '#64748b', marginTop: 6 }}>Up to 20MB • Summarize, Chat, Notes, Quiz instantly</p>
-            <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginTop: 10, flexWrap: 'wrap' }}>
-              {['Summarize', 'Ask', 'Notes', 'Quiz', 'Compare'].map(tag => (
-                <span key={tag} style={{ fontSize: 11, padding: '3px 8px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 999, fontWeight: 600, color: '#475569' }}>{tag}</span>
-              ))}
-            </div>
+              style={{ width: 52, height: 52, borderRadius: 14, background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.9)', display: 'grid', placeItems: 'center', margin: '0 auto 12px', fontSize: 22, boxShadow: '0 4px 16px rgba(15,23,42,0.06)' }}
+            >⬆</motion.div>
+            <p style={{ fontWeight: 750, fontSize: 15, letterSpacing: '-0.01em' }}>Drop your PDF here or click to browse</p>
+            <p style={{ fontSize: 13, color: '#64748b', marginTop: 6 }}>Private to you • up to 20 MB</p>
+            <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>We’ll turn it into summaries, notes & quizzes</p>
           </motion.div>
         )}
       </AnimatePresence>
