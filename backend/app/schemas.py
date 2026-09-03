@@ -15,7 +15,9 @@ class DocumentOut(BaseModel):
 class AskRequest(BaseModel):
     document_id: int
     question: str
+    lang: Optional[str] = "en"
 
 class CompareRequest(BaseModel):
     doc_id_1: int
     doc_id_2: int
+    lang: Optional[str] = "en"

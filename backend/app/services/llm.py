@@ -18,6 +18,18 @@ if not USE_MOCK:
 
 SYSTEM = "You are a thorough, detailed document assistant for students. Be comprehensive and explanatory — give in-depth answers with examples, context and structured tables. Always return readable markdown with headings, bullet lists and GFM tables. Avoid overly brief replies."
 
+LANG_NAMES = {"en":"English","hi":"Hindi","es":"Spanish","fr":"French","de":"German","ja":"Japanese","zh":"Chinese","pt":"Portuguese","ru":"Russian","ar":"Arabic","bn":"Bengali","te":"Telugu","ta":"Tamil","mr":"Marathi","gu":"Gujarati","kn":"Kannada","pa":"Punjabi","ur":"Urdu","it":"Italian","ko":"Korean","tr":"Turkish"}
+
+def _lang_suffix(lang: str):
+    if not lang or lang.lower() == "en":
+        return ""
+    name = LANG_NAMES.get(lang.lower(), lang)
+    return f" Respond entirely in {name} ({lang}) language. Use {name} for all headings, tables and explanations."
+
+def _lang_system(lang: str, base=SYSTEM):
+    s = _lang_suffix(lang)
+    return base + s if s else base
+
 def _call(prompt: str, system=SYSTEM, max_tokens=2200):
     if USE_MOCK:
         return mock(prompt)
@@ -246,27 +258,32 @@ def mock(prompt: str):
         return _mock_notes(txt)
     return f"Local answer (no API key): {prompt[:200]}..."
 
-def summarize_text(text: str, length="medium"):
+def summarize_text(text: str, length="medium", lang: str = "en"):
     if USE_MOCK:
         return _mock_summarize(text, length)
     t = text[:15000]
     instr = {"short":"in 150-200 words with 5-6 detailed bullets and examples","medium":"in 350-500 words with detailed bullets, tables and examples","detailed":"in 700-900 words comprehensive, with sections, tables, examples and thorough takeaways"}.get(length,"in 350-500 words with detailed bullets, tables and examples")
-    prompt = f"Summarize this document {instr}. Be thorough, not brief. Return markdown with: # Summary, a detailed table (| Property | Value |) with stats (word count, themes, purpose), ## Key Points (7-10 detailed bullets with explanations), ## Detailed Analysis, and ## Takeaway. Use tables where helpful.\n\n---\n{t}\n---"
-    return _call(prompt, max_tokens=1800 if length!="detailed" else 2600)
+    suffix = _lang_suffix(lang)
+    prompt = f"Summarize this document {instr}. Be thorough, not brief. Return markdown with: # Summary, a detailed table (| Property | Value |) with stats (word count, themes, purpose), ## Key Points (7-10 detailed bullets with explanations), ## Detailed Analysis, and ## Takeaway. Use tables where helpful.{suffix}\n\n---\n{t}\n---"
+    system = _lang_system(lang)
+    return _call(prompt, system=system, max_tokens=1800 if length!="detailed" else 2600)
 
-def answer_question(text: str, question: str):
+def answer_question(text: str, question: str, lang: str = "en"):
     if USE_MOCK:
         return _mock_answer(text, question)
     t = text[:15000]
-    prompt = f"Document:\n{t}\n\nQuestion: {question}\n\nAnswer THOROUGHLY and in detail based only on the document. If not found, say so but suggest related context. Be comprehensive: use 300-500 words, examples, step-by-step explanations, and markdown with ## Answer heading, bullet lists, and a table (| Aspect | Details |) where helpful. Do NOT give a brief 2-3 line answer. Use simple language but be in-depth."
-    return _call(prompt, system="You are a thorough, patient teaching assistant. Explain in depth with examples and structure. Always use detailed markdown with tables and headings. Avoid short answers.", max_tokens=2200)
+    suffix = _lang_suffix(lang)
+    prompt = f"Document:\n{t}\n\nQuestion: {question}\n\nAnswer THOROUGHLY and in detail based only on the document. If not found, say so but suggest related context. Be comprehensive: use 300-500 words, examples, step-by-step explanations, and markdown with ## Answer heading, bullet lists, and a table (| Aspect | Details |) where helpful. Do NOT give a brief 2-3 line answer. Use simple language but be in-depth.{suffix}"
+    system = _lang_system(lang, base="You are a thorough, patient teaching assistant. Explain in depth with examples and structure. Always use detailed markdown with tables and headings. Avoid short answers.")
+    return _call(prompt, system=system, max_tokens=2200)
 
-def extract_info(text: str):
+def extract_info(text: str, lang: str = "en"):
     if USE_MOCK:
         return _mock_extract(text)
     t = text[:12000]
-    prompt = f"Extract info from this doc. Return JSON with keys: key_points (5-7 strings), entities, dates, summary.\n\nDoc:\n{t}\n\nReturn ONLY valid JSON."
-    raw = _call(prompt, max_tokens=800)
+    suffix = _lang_suffix(lang)
+    prompt = f"Extract info from this doc. Return JSON with keys: key_points (5-7 strings), entities, dates, summary. Keep values in original doc language but summary in {LANG_NAMES.get(lang.lower(), lang) if lang.lower()!='en' else 'English'}.{suffix}\n\nDoc:\n{t}\n\nReturn ONLY valid JSON."
+    raw = _call(prompt, system=_lang_system(lang), max_tokens=800)
     try:
         s = raw.find("{"); e = raw.rfind("}")+1
         if s!=-1:
@@ -275,23 +292,26 @@ def extract_info(text: str):
     except:
         return {"key_points":[raw[:200]],"entities":[],"dates":[],"summary":raw[:400]}
 
-def compare_docs(t1: str, t2: str):
+def compare_docs(t1: str, t2: str, lang: str = "en"):
     if USE_MOCK:
         return _mock_compare(t1, t2)
-    prompt = f"Compare these two docs IN DEPTH. Return markdown with # Comparison, a detailed table | Aspect | Document 1 | Document 2 | (use 6-8 rows: purpose, key topics, methodology, findings, tone), then ## Similarities (5-7 detailed bullets) and ## Differences (5-7 detailed bullets) and ## Verdict. Be thorough, 400-600 words.\n\nDoc1:\n{t1[:8000]}\n\nDoc2:\n{t2[:8000]}"
-    return _call(prompt, max_tokens=2000)
+    suffix = _lang_suffix(lang)
+    prompt = f"Compare these two docs IN DEPTH. Return markdown with # Comparison, a detailed table | Aspect | Document 1 | Document 2 | (use 6-8 rows: purpose, key topics, methodology, findings, tone), then ## Similarities (5-7 detailed bullets) and ## Differences (5-7 detailed bullets) and ## Verdict. Be thorough, 400-600 words.{suffix}\n\nDoc1:\n{t1[:8000]}\n\nDoc2:\n{t2[:8000]}"
+    return _call(prompt, system=_lang_system(lang), max_tokens=2000)
 
-def generate_notes(text: str):
+def generate_notes(text: str, lang: str = "en"):
     if USE_MOCK:
         return _mock_notes(text)
-    prompt = f"Create DETAILED study notes from this doc (400-600 words). Use markdown: # Title, a stats table (| Stat | Value |), ## Key Takeaways (8-10 detailed bullets with explanations), ## Important Terms table (| Term | Definition | 6-10 rows), ## Summary (150+ words), ## Revision Questions (3-5). Be comprehensive and student-friendly, use tables.\n\nDoc:\n{text[:15000]}"
-    return _call(prompt, max_tokens=2200)
+    suffix = _lang_suffix(lang)
+    prompt = f"Create DETAILED study notes from this doc (400-600 words). Use markdown: # Title, a stats table (| Stat | Value |), ## Key Takeaways (8-10 detailed bullets with explanations), ## Important Terms table (| Term | Definition | 6-10 rows), ## Summary (150+ words), ## Revision Questions (3-5). Be comprehensive and student-friendly, use tables.{suffix}\n\nDoc:\n{text[:15000]}"
+    return _call(prompt, system=_lang_system(lang), max_tokens=2200)
 
-def generate_quiz(text: str, n=5):
+def generate_quiz(text: str, n=5, lang: str = "en"):
     if USE_MOCK:
         return _mock_quiz(text, n)
-    prompt = f"Generate {n} MCQ quiz questions from this doc. Return ONLY JSON array with fields: question, options (4 strings), correct_index (0-3), explanation.\n\nDoc:\n{text[:10000]}"
-    raw = _call(prompt, max_tokens=1200)
+    suffix = _lang_suffix(lang)
+    prompt = f"Generate {n} MCQ quiz questions from this doc. Return ONLY JSON array with fields: question, options (4 strings), correct_index (0-3), explanation. Questions and options in {LANG_NAMES.get(lang.lower(), lang) if lang.lower()!='en' else 'English'}.{suffix}\n\nDoc:\n{text[:10000]}"
+    raw = _call(prompt, system=_lang_system(lang), max_tokens=1200)
     try:
         s = raw.find("["); e = raw.rfind("]")+1
         if s!=-1:
