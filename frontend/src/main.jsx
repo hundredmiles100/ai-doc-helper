@@ -2,9 +2,6 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import './index.css'
-import { initLiquidGlass } from './lib/liquidGlass'
-
-initLiquidGlass()
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
