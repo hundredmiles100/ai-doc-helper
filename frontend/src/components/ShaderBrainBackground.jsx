@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 
 // Shader + Brain Video background
 // - brain video: looping, muted, slow, blended with shader canvas
-// - shader: WebGL fragment shader for liquid neural flow
-const BRAIN_VIDEO = 'https://cdn.pixabay.com/video/2024/03/30/206173_large.mp4'
-const FALLBACK_VIDEO = 'https://cdn.pixabay.com/video/2023/04/15/159049-818026306_large.mp4'
+// - uses local /brain.mp4 (public folder) for same-origin (no hotlink block) + CDN fallback
+const BRAIN_VIDEO = '/brain.mp4'
+const FALLBACK_VIDEO = 'https://cdn.pixabay.com/video/2024/03/30/206173_small.mp4'
 
 const VERT = `
 attribute vec2 position;
